@@ -18,29 +18,16 @@ public class DataBaseManager {
 	private double beginTime;
 	private String url;
 	private Connection conn = null;
-	private Vector<String> urlList;
 
-	public class DataFromDB {
-		public String urlDB;
-		public int id;
-		public int cnt;
-
-		public DataFromDB(String url, int _id, int _cnt) {
-			urlDB = url;
-			id = _id;
-			cnt = _cnt;
-		}
-	}
-
-	private Vector<DataFromDB> dbData = new Vector<DataFromDB>();
 	private DataFromDB tmpData;
 	private Date nowDate = new Date();
 	private String nDate = nowDate.toString();
+	private Vector<DataFromDB> dbData = new Vector<DataFromDB>();
 
-	public DataBaseManager(String dbDriverPath, String dbName, Vector<String> _urlList) {
+	public DataBaseManager(Vector<DataFromDB> _dbData, String dbDriverPath, String dbName) {
+		dbData = _dbData;
 		url = dbDriverPath + dbName;
 		beginTime = System.nanoTime();
-		urlList = _urlList;
 	}
 
 	public void databaseConnect(String dbDriverPath, String dbFilePath, String dbName, String tableName)
@@ -49,14 +36,12 @@ public class DataBaseManager {
 		// String dirPath = dbFilePath;
 		// File dbFile = new File(dirPath, dbName);
 		// if (dbFile.exists()) {
-		logger.info("db named " + dbName + "already exists.");
 		logger.info("connecting to " + dbName);
 		try {
 			conn = DriverManager.getConnection(url);
 			logger.info("Connection to " + dbName + " has been established");
-			this.selectAll(tableName);
+
 		} catch (SQLException e) {
-			logger.warn("sth wroing in connecting DB", e);
 		}
 
 		// } //else {
@@ -101,61 +86,28 @@ public class DataBaseManager {
 				tmp = rs.getString("URL");
 				if (tmp != null) {
 					tmpData = new DataFromDB(tmp, rs.getInt("id"), rs.getInt("checked_cnt"));
-					/*
-					 * tmpData.urlDB = tmp; tmpData.id = rs.getInt("id"); tmpData.cnt =
-					 * rs.getInt("checked_cnt"); System.out.println(tmpData.urlDB); why
-					 * not!?!!@?!?@!?
-					 */
 					dbData.add(tmpData);
 				} else
 					logger.info("There is no url in DB");
 			}
-
-			this.insert(tableName, urlList);
 
 		} catch (SQLException e) {
 			logger.warn("sth wrong in selecting data from DB", e);
 		}
 	}
 
-	public void insert(String tableName, List<String> urlList) {
+	public void insert(String tableName, List<String> urlList, String x) {
 
 		PreparedStatement pstmt;
-		Integer res;
-		for (String x : urlList) {
-			res = repCheck(x);
-			if (res == -1) { // if it is new URL
-				String sql = "INSERT INTO " + tableName + "(URL, added_date, checked_date) VALUES(?,?,?)";
-				try {
-					pstmt = conn.prepareStatement(sql);
-					pstmt.setString(1, x);
-					pstmt.setString(2, nDate);
-					pstmt.setString(3, nDate);
-					pstmt.executeUpdate();
-				} catch (SQLException e) {
-					logger.warn(e.getMessage());
-				}
-				logger.info("new URL " + x + " has been added to DB");
-			} else { // already in the DB
-				logger.debug("url is already in the DB");
-				// cntChecked++
-				String sql = "UPDATE " + tableName + " SET checked_date=?, checked_cnt=? WHERE id=?";
-				try {
-					pstmt = conn.prepareStatement(sql);
-					pstmt.setString(1, nDate);
-					pstmt.setInt(2, dbData.elementAt(res).cnt + 1);
-					pstmt.setInt(3, dbData.elementAt(res).id);
-					pstmt.executeUpdate();
-					logger.debug("cnt for " + dbData.elementAt(res).urlDB + " has been updated");
-				} catch (SQLException e) {
-					logger.warn("sth wrong in inserting to DB", e);
-				}
-
-			}
+		String sql = "INSERT INTO " + tableName + "(URL, added_date, checked_date) VALUES(?,?,?)";
+		try {
+			pstmt = conn.prepareStatement(sql);
+			pstmt.setString(1, x);
+			pstmt.setString(2, nDate);
+			pstmt.setString(3, nDate);
+			pstmt.executeUpdate();
+		} catch (SQLException e) {
 		}
-
-		this.dbClose();
-
 	}
 
 	public void dbClose() {
@@ -163,26 +115,36 @@ public class DataBaseManager {
 			conn.close();
 			logger.info("DB connection has been closed");
 		} catch (SQLException e) {
-			logger.warn(e.getMessage());
 		}
 		double execTime = (System.nanoTime() - beginTime) / 1000000;
 		logger.info("DB process time : " + execTime + " ms");
 	}
 
-	public int repCheck(String url) {
-
+	public int getCnt(int _id) {
 		for (int i = 0; i < dbData.size(); i++) {
-			if (dbData.elementAt(i).urlDB.contentEquals(url)) {
-				return i;
+			if (dbData.elementAt(i).id == _id) {
+				return dbData.elementAt(i).cnt;
 			}
 		}
 		return -1;
 	}
 
-	public void update(String tableName) throws SQLException {
-		String sql = "UPDATE " + tableName + " SET dateChecked=?";
-		PreparedStatement pstmt = conn.prepareStatement(sql);
-		pstmt.setString(1, nDate);
-		pstmt.executeUpdate();
+	public void update(String tableName, int _id, String x) throws SQLException {
+		{ // already in the DB
+			logger.debug("url is already in the DB");
+			// cntChecked++
+			PreparedStatement pstmt;
+			String sql = "UPDATE " + tableName + " SET checked_date=?, checked_cnt=? WHERE id=?";
+			try {
+				pstmt = conn.prepareStatement(sql);
+				pstmt.setString(1, nDate);
+				pstmt.setInt(2, this.getCnt(_id) + 1);
+				pstmt.setInt(3, _id);
+				pstmt.executeUpdate();
+
+			} catch (SQLException e) {
+			}
+
+		}
 	}
 }
