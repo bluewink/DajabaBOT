@@ -21,7 +21,9 @@ public class DajabaBot {
 		}
 		Thread DT = new Thread(new DajabaThread(setter.getProgramCycle(),setter.getDatabaseDriverPath(), setter.getDatabaseName(), setter.getDatabasePath(),setter.getHtmlFilePath(),logger), "DajabaBot");
 		DT.start();
-		if (Boolean.parseBoolean(System.getenv("RUNNING_IN_ECLIPSE"))) {
+	
+		/*
+		 if (Boolean.parseBoolean(System.getenv("RUNNING_IN_ECLIPSE"))) {
 		    System.out.println("You're using Eclipse; click in this console and " +
 		            "press ENTER to call System.exit() and run the shutdown routine.");
 		    try {
@@ -30,13 +32,15 @@ public class DajabaBot {
 		        e.printStackTrace();
 		    }
 		    System.exit(0);
+		 */
+		
 		}
 		
 		// ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 		// scheduler.scheduleAtFixedRate(new DajabaThread(setter, logger), 0,
 		// setter.getProgramCycle(), TimeUnit.SECONDS);
 		
-	}
+	
 
 	
 }
